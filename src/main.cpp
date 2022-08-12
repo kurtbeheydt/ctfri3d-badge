@@ -37,8 +37,12 @@ void moveEye() {
 
         // render the eye
         if ((previousunitx != unitx) || (previousunity != unity)) {
-            tft.fillCircle(120 - previousunitx * 80, 120 - previousunity * 80, 20, ST77XX_WHITE);
-            tft.fillCircle(120 - unitx * 80, 120 - unity * 80, 10, ST77XX_BLACK);
+            tft.fillCircle(60 - previousunitx * 35, 120 - previousunity * 35, 20, ST77XX_WHITE);
+            tft.fillCircle(60 - unitx * 35, 120 - unity * 35, 20, ST77XX_GREEN);
+            tft.fillCircle(60 - unitx * 35, 120 - unity * 35, 10, ST77XX_BLACK);
+            tft.fillCircle(180 - previousunitx * 35, 120 - previousunity * 35, 20, ST77XX_WHITE);
+            tft.fillCircle(180 - unitx * 35, 120 - unity * 35, 20, ST77XX_GREEN);
+            tft.fillCircle(180 - unitx * 35, 120 - unity * 35, 10, ST77XX_BLACK);
             previousunitx = unitx;
             previousunity = unity;
         }
@@ -97,7 +101,8 @@ void setup(void) {
     digitalWrite(BADGE2020_BACKLIGHT, HIGH);
 
     tft.fillScreen(0x2c45);
-    tft.fillCircle(120, 120, 100, ST77XX_WHITE);
+    tft.fillCircle(60, 120, 50, ST77XX_WHITE);
+    tft.fillCircle(180, 120, 50, ST77XX_WHITE);
 
     while (accelerometer.init(LIS2DH12_RANGE_2GA) == -1) {
         // Equipment connection exception or I2C address error
