@@ -37,12 +37,12 @@ void moveEye() {
 
         // render the eye
         if ((previousunitx != unitx) || (previousunity != unity)) {
-            tft.fillCircle(60 - previousunitx * 35, 120 - previousunity * 35, 20, ST77XX_WHITE);
-            tft.fillCircle(60 - unitx * 35, 120 - unity * 35, 20, ST77XX_GREEN);
-            tft.fillCircle(60 - unitx * 35, 120 - unity * 35, 10, ST77XX_BLACK);
-            tft.fillCircle(180 - previousunitx * 35, 120 - previousunity * 35, 20, ST77XX_WHITE);
-            tft.fillCircle(180 - unitx * 35, 120 - unity * 35, 20, ST77XX_GREEN);
-            tft.fillCircle(180 - unitx * 35, 120 - unity * 35, 10, ST77XX_BLACK);
+            tft.fillCircle(60 - previousunitx * 30, 120 - previousunity * 30, 20, ST77XX_WHITE);
+            tft.fillCircle(60 - unitx * 30, 120 - unity * 30, 20, ST77XX_GREEN);
+            tft.fillCircle(60 - unitx * 30, 120 - unity * 30, 10, ST77XX_BLACK);
+            tft.fillCircle(180 - previousunitx * 30, 120 - previousunity * 30, 20, ST77XX_WHITE);
+            tft.fillCircle(180 - unitx * 30, 120 - unity * 30, 20, ST77XX_GREEN);
+            tft.fillCircle(180 - unitx * 30, 120 - unity * 30, 10, ST77XX_BLACK);
             previousunitx = unitx;
             previousunity = unity;
         }
