@@ -1,123 +1,166 @@
-
-#include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
-#include <Badge2020_Accelerometer.h>
-#include <Badge2020_TFT.h>
+// This code is for the sweet 4x4 badge addon
+// It is crappy, but it works
+// This code is only to be used to connect the Fri3d Camp 2022 badge to the macropad
 
-Badge2020_Accelerometer accelerometer;
-Badge2020_TFT tft;
+#include <Adafruit_NeoPixel.h>  //neopixel lib
+#include <Badge2020_TFT.h>      //fri3d badge TFT lib
+#include <BleKeyboard.h>        //blekeyboard lib
+// This library is for using BLE HID with your ESP32
+//
+// This is not availble on the library manager so
+// needs to be installed from Github
+// https://github.com/T-vK/ESP32-BLE-Keyboard
 
-double previousunitx, previousunity;
+#include <Keypad.h>  //keypad lib
+// This library is for interfacing with the 4x4 Matrix
+//
+// Can be installed from the library manager, search for "keypad"
+// and install the one by Mark Stanley and Alexander Brevig
+// https://playground.arduino.cc/Code/Keypad/ - https://github.com/Chris--A/Keypad
 
-long currentMillis;
-long eyeTimeOut = 200;
-long lastEyeMovement = 0;
-long blinkTimeout = 5000;
-long lastBlink = 0;
-long pixelInterval = 10;
-long previousPixelInterval = 0;
+Badge2020_TFT tft;  // initialise TFT
 
-#define NEOPIXEL_PIN 2
-#define NEOPIXEL_COUNT 5
-long firstPixelHue = 0;
+const byte ROWS = 4;  // four rows
+const byte COLS = 4;  // four columns
 
-Adafruit_NeoPixel strip(NEOPIXEL_COUNT, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
+// the library will return the character inside this array
+// when the appropriate button is pressed.
+char keys[ROWS][COLS] = {
+    {'1', '2', '3', 'A'},
+    {'4', '5', '6', 'B'},
+    {'7', '8', '9', 'C'},
+    {'*', '0', '#', 'D'},
+};
 
-void moveEye() {
-    if (currentMillis > lastEyeMovement + eyeTimeOut) {
-        lastEyeMovement = currentMillis;
-        int16_t x, y, z;
-        accelerometer.readXYZ(x, y, z);
-        accelerometer.mgScale(x, y, z);
+// Because our Fri3d macropad is wired in row2col we need to change rows and columns around
 
-        // make it a unit length vector
-        double length = sqrt(x * x + y * y + z * z);
-        double unitx = x / length;
-        double unity = y / length;
+byte colPins[ROWS] = {26, 13, 27, 2};  // connect the column pinouts to the rows of the keypad
+byte rowPins[COLS] = {15, 14, 0, 32};  // connect the row pinouts to the columns of the keypad
 
-        // render the eye
-        if ((previousunitx != unitx) || (previousunity != unity)) {
-            tft.fillCircle(60 - previousunitx * 30, 120 - previousunity * 30, 20, ST77XX_WHITE);
-            tft.fillCircle(60 - unitx * 30, 120 - unity * 30, 20, ST77XX_GREEN);
-            tft.fillCircle(60 - unitx * 30, 120 - unity * 30, 10, ST77XX_BLACK);
-            tft.fillCircle(180 - previousunitx * 30, 120 - previousunity * 30, 20, ST77XX_WHITE);
-            tft.fillCircle(180 - unitx * 30, 120 - unity * 30, 20, ST77XX_GREEN);
-            tft.fillCircle(180 - unitx * 30, 120 - unity * 30, 10, ST77XX_BLACK);
-            previousunitx = unitx;
-            previousunity = unity;
-        }
-    }
-}
+Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
-void blinkEye() {
-    if (currentMillis > lastBlink + blinkTimeout) {
-        lastBlink = currentMillis - (rand() % 10000);
-        tft.fillScreen(0x2c45);
-        delay(100);
-        tft.fillCircle(120, 120, 100, ST77XX_WHITE);
-        previousunitx = 0;
-        previousunity = 0;
-    }
-}
+// First param is name, choose something unique
+// Second is manufacturer
+// Third is initial battery level
+BleKeyboard bleKeyboard("Sweet4x4Bek", "Fri3d", 100);
 
-uint32_t Wheel(byte WheelPos) {
-    WheelPos = 255 - WheelPos;
-    if (WheelPos < 85) {
-        return strip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
-    }
-    if (WheelPos < 170) {
-        WheelPos -= 85;
-        return strip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
-    }
-    WheelPos -= 170;
-    return strip.Color(WheelPos * 3, 255 - WheelPos * 3, 0);
-}
+#define LEDPIN 12     // leds of the 4x4 addon
+#define LEDPIN_INT 2  // internal leds of the fri3d badge
+#define NUMPIXELS 9
+#define NUMPIXELS_INT 5
 
-void rainbow() {
-    if (currentMillis > pixelInterval + previousPixelInterval) {
-        previousPixelInterval = millis();
-        firstPixelHue += 256;
-        if (firstPixelHue >= 5 * 65536) {
-            firstPixelHue = 0;
-        }
+Adafruit_NeoPixel strip(NUMPIXELS, LEDPIN, NEO_GRB + NEO_KHZ800);          // strip for the 4x4 leds
+Adafruit_NeoPixel strip_int(NUMPIXELS, LEDPIN_INT, NEO_GRB + NEO_KHZ800);  // strip for the internal badge leds
+uint32_t warmwhite = strip.Color(255, 191, 0);
 
-        strip.rainbow(firstPixelHue);
-        strip.show();
-    }
-}
+void setup() {
+    // Serial.begin(9600);
+    bleKeyboard.begin();
+    pinMode(0, OUTPUT);
+    strip.begin();      // INITIALIZE NeoPixel strip 4x4 keyb
+    strip_int.begin();  // INITIALIZE NeoPixel strip internal badge
+    strip.setBrightness(10);
+    strip_int.setBrightness(10);
 
-void setup(void) {
-    Wire.begin();
-    Serial.begin(115200);
-    while (!Serial)
-        ;
-    delay(100);
-    Serial.println("booted");
-
-    tft.init(240, 240);
+    tft.init(240, 240);  // init tft
     tft.setRotation(2);
 
     pinMode(BADGE2020_BACKLIGHT, OUTPUT);
     digitalWrite(BADGE2020_BACKLIGHT, HIGH);
 
-    tft.fillScreen(0x2c45);
-    tft.fillCircle(60, 120, 50, ST77XX_WHITE);
-    tft.fillCircle(180, 120, 50, ST77XX_WHITE);
+    // Anything from the Adafruit GFX library can go here, see
+    // https://learn.adafruit.com/adafruit-gfx-graphics-library
 
-    while (accelerometer.init(LIS2DH12_RANGE_2GA) == -1) {
-        // Equipment connection exception or I2C address error
-        Serial.println("No I2C devices found");
-        delay(1000);
-    }
+    tft.fillScreen(ST77XX_BLACK);
+    tft.setCursor(10, 110);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.setTextSize(3);
+    tft.println("The cake is a lie");
+}
 
-    strip.begin();
-    strip.show();
-    strip.setBrightness(50);
+// This will hold down all the following buttons.
+void sendMacroCommand(uint8_t key) {
+    bleKeyboard.press(key);
 }
 
 void loop() {
-    currentMillis = millis();
-    moveEye();
-    //  blinkEye();
-    rainbow();
+    strip.fill(warmwhite, 0, 9);
+    strip.show();
+
+    for (int i = 0; i < 5; i++) {  // For each pixel...
+        strip_int.setPixelColor(i, strip_int.Color(0, 150, 0));
+        strip_int.show();
+    }
+
+    char key = keypad.getKey();
+
+    // Only do something with the keypress if we
+    // are connected to something via bluetooth
+
+    if (bleKeyboard.isConnected() && key) {
+        switch (key) {
+            case '1':
+                // encoder
+                sendMacroCommand('x');
+                break;
+            case '2':
+                sendMacroCommand(KEY_LEFT_SHIFT);
+                sendMacroCommand('7');
+                break;
+            case '3':
+                sendMacroCommand(KEY_LEFT_SHIFT);
+                sendMacroCommand('4');
+                break;
+            case '4':
+                sendMacroCommand(KEY_LEFT_SHIFT);
+                sendMacroCommand('0');
+                break;
+            case '5':
+                sendMacroCommand(KEY_LEFT_SHIFT);
+                sendMacroCommand('8');
+                break;
+            case '6':
+                sendMacroCommand(KEY_LEFT_SHIFT);
+                sendMacroCommand('5');
+                break;
+            case '7':
+                sendMacroCommand('q');
+                break;
+            case '8':
+                sendMacroCommand(KEY_LEFT_SHIFT);
+                sendMacroCommand('9');
+                break;
+            case '9':
+                sendMacroCommand(KEY_LEFT_SHIFT);
+                sendMacroCommand('6');
+                break;
+            case '0':
+                sendMacroCommand('b');
+                break;
+            case '*':
+                sendMacroCommand('b');
+                break;
+            case '#':
+                sendMacroCommand('c');
+                break;
+            case 'A':
+                sendMacroCommand(KEY_LEFT_SHIFT);
+                sendMacroCommand('1');
+                break;
+            case 'B':
+                sendMacroCommand(KEY_LEFT_SHIFT);
+                sendMacroCommand('2');
+                break;
+            case 'C':
+                sendMacroCommand(KEY_LEFT_SHIFT);
+                sendMacroCommand('3');
+                break;
+            case 'D':
+                sendMacroCommand('d');
+                break;
+        }
+        // delay(50);
+        bleKeyboard.releaseAll();  // this releases the buttons
+    }
 }
